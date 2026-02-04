@@ -20,7 +20,6 @@ class QRCodeGeneratorGUI:
 
         # 存储生成的图片对象（防止被垃圾回收）
         self.qr_images = []
-        self.generated_files = []
 
         # 创建界面
         self.create_widgets()
@@ -38,13 +37,6 @@ class QRCodeGeneratorGUI:
             font=("Arial", 16, "bold")
         )
         title_label.pack()
-
-        subtitle_label = ttk.Label(
-            title_frame,
-            text="适用于无网络、无USB环境的数据导出",
-            font=("Arial", 10)
-        )
-        subtitle_label.pack()
 
         # 创建主容器
         main_container = ttk.Frame(self.root, padding="10")
@@ -103,15 +95,7 @@ class QRCodeGeneratorGUI:
         error_correction_combo.grid(row=0, column=1, sticky=tk.W, pady=5, padx=(10, 0))
         error_correction_combo.current(1)
 
-        # 输出文件名
-        ttk.Label(settings_frame, text="输出文件名:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.output_name_var = tk.StringVar(value="qrcode")
-        output_name_entry = ttk.Entry(
-            settings_frame,
-            textvariable=self.output_name_var,
-            width=18
-        )
-        output_name_entry.grid(row=1, column=1, sticky=tk.W, pady=5, padx=(10, 0))
+
 
         # 生成按钮
         self.generate_btn = ttk.Button(
@@ -120,7 +104,7 @@ class QRCodeGeneratorGUI:
             command=self.generate_qrcode,
             style="Accent.TButton"
         )
-        self.generate_btn.grid(row=2, column=0, columnspan=2, pady=(10, 0), sticky=tk.EW)
+        self.generate_btn.grid(row=1, column=0, columnspan=2, pady=(10, 0), sticky=tk.EW)
 
         # 信息显示区域
         info_frame = ttk.LabelFrame(right_panel, text="文本信息", padding="10")
@@ -232,7 +216,6 @@ class QRCodeGeneratorGUI:
         for widget in self.preview_container.winfo_children():
             widget.destroy()
         self.qr_images.clear()
-        self.generated_files.clear()
 
         # 更新状态
         self.status_label.config(text="正在生成二维码...")
@@ -246,58 +229,40 @@ class QRCodeGeneratorGUI:
                 border=4
             )
 
-            # 生成二维码
-            output_prefix = self.output_name_var.get() or "qrcode"
-            image_paths = converter.text_to_qrcode(text, output_prefix)
-            self.generated_files = image_paths
+            # 生成二维码（不保存文件）
+            qr_images_data = converter.generate_qrcode_images(text)
 
             # 显示预览
-            for i, img_path in enumerate(image_paths):
+            for i, (img, text_part) in enumerate(qr_images_data):
                 # 创建每个二维码的框架
                 qr_frame = ttk.Frame(self.preview_container, padding="5")
                 qr_frame.pack(fill=tk.X, pady=5)
 
                 # 标题
-                if len(image_paths) > 1:
-                    title = f"二维码 {i+1}/{len(image_paths)}"
+                if len(qr_images_data) > 1:
+                    title = f"二维码 {i+1}/{len(qr_images_data)}"
                 else:
                     title = "二维码"
 
                 title_label = ttk.Label(qr_frame, text=title, font=("Arial", 10, "bold"))
                 title_label.pack()
 
-                # 加载并显示图片
-                img = Image.open(img_path)
                 # 调整大小以适应预览
-                img.thumbnail((300, 300), Image.Resampling.LANCZOS)
-                photo = ImageTk.PhotoImage(img)
+                img_copy = img.copy()
+                img_copy.thumbnail((300, 300), Image.Resampling.LANCZOS)
+                photo = ImageTk.PhotoImage(img_copy)
                 self.qr_images.append(photo)  # 保持引用
 
                 img_label = ttk.Label(qr_frame, image=photo)
                 img_label.pack(pady=5)
 
-                # 文件名
-                filename_label = ttk.Label(
-                    qr_frame,
-                    text=os.path.basename(img_path),
-                    font=("Arial", 8)
-                )
-                filename_label.pack()
-
             # 更新状态
-            if len(image_paths) > 1:
+            if len(qr_images_data) > 1:
                 self.status_label.config(
-                    text=f"成功生成 {len(image_paths)} 个二维码！请按顺序扫描。"
+                    text=f"成功生成 {len(qr_images_data)} 个二维码！请按顺序扫描。"
                 )
             else:
-                self.status_label.config(text=f"成功生成二维码: {image_paths[0]}")
-
-            # 显示成功消息
-            messagebox.showinfo(
-                "成功",
-                f"已生成 {len(image_paths)} 个二维码\n\n" +
-                "\n".join([os.path.basename(p) for p in image_paths])
-            )
+                self.status_label.config(text="成功生成二维码！")
 
         except Exception as e:
             messagebox.showerror("错误", f"生成二维码失败:\n{str(e)}")

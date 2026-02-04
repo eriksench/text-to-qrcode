@@ -114,6 +114,27 @@ class TextToQRCode:
         img = qr.make_image(fill_color="black", back_color="white")
         return img
 
+    def generate_qrcode_images(self, text):
+        """
+        生成二维码图片对象（不保存到文件）
+
+        Args:
+            text: 要转换的文本
+
+        Returns:
+            list: 包含 (PIL.Image, 文本片段) 元组的列表
+        """
+        # 分割文本
+        text_parts = self.split_text(text)
+
+        # 生成二维码
+        images = []
+        for part in text_parts:
+            img = self.generate_qrcode(part)
+            images.append((img, part))
+
+        return images
+
     def text_to_qrcode(self, text, output_prefix="qrcode"):
         """
         将文本转换为二维码图片
